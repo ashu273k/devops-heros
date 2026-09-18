@@ -279,6 +279,14 @@ This automatically:
 
 ---
 
+## Terminal Verification Screenshot
+
+The captured JPG shows the deployed Ingress, successful frontend and backend requests, and ConfigMap/Secret values injected into the backend Pod.
+
+![Session 12 full demo terminal verification](../screenshots/session-12-full-demo.jpg)
+
+---
+
 ## Cleanup
 ```bash
 bash 04-full-demo/cleanup.sh
