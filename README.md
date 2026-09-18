@@ -7,3 +7,6 @@
 - Section A: https://forms.gle/ydjAJcwxjpjBXgxB8
 - Section B: https://forms.gle/pAuXQaokwVzhRzit6                      
 
+## Kubernetes Lab Guide
+- [Lecture 10 Kubernetes core objects lab](session10-k8s-core-objects/Readme.md)
+
