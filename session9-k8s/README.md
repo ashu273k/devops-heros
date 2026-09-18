@@ -1,6 +1,6 @@
 # Session 9: Kubernetes Fundamentals and Cluster Architecture
 
-**Author:** [Your Name]  
+**Author:** Aashu Kumar  
 **Course:** SST DevOps and Cloud [SWE]  
 **Session:** 09 - Kubernetes Fundamentals  
 **Repository:** devops-heros / session9-k8s
