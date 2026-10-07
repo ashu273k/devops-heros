@@ -296,6 +296,60 @@ Remember:
 
 ---
 
+## Hands-on Results
+
+The HPA experiment was completed with the following steps:
+
+```bash
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+kubectl apply -f hpa.yaml
+kubectl get hpa
+kubectl top pods
+```
+
+A BusyBox load generator was then started against the ClusterIP Service:
+
+```bash
+kubectl run load-generator \
+  --image=busybox:1.36 \
+  --restart=Never \
+  -- /bin/sh -c \
+  "while true; do wget -q -O- http://hpa-demo-service; done"
+```
+
+The following commands were used to observe the workload:
+
+```bash
+kubectl get hpa -w
+kubectl get pods -w
+kubectl top pods
+kubectl describe hpa hpa-demo
+```
+
+Observed output during the load test:
+
+```text
+NAME       REFERENCE            TARGETS    MINPODS   MAXPODS   REPLICAS
+hpa-demo   Deployment/hpa-demo  cpu: 0%/50%  1         5         1
+hpa-demo   Deployment/hpa-demo  cpu: 53%/50% 1         5         2
+```
+
+The CPU utilization exceeded the configured 50% target, and the HPA scaled
+the Deployment from one Pod to two Pods. The load generator was later stopped:
+
+```bash
+kubectl delete pod load-generator
+```
+
+![HPA scaling output](hpa.png)
+
+The screenshot shows the load generator running, two application Pods in the
+`Running` state, CPU utilization reaching `53%/50%`, and the replica count
+increasing to `2`.
+
+---
+
 ## Reference
 
 * **Horizontal Pod Autoscaling:**  

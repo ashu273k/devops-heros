@@ -196,9 +196,50 @@ kubectl get hpa -n production-webapp -w
 ```
 *After the 5-minute stabilization window, replicas will gradually reduce back to 2.*
 
+## 7. Completed Project Evidence
+
+The mini-project was deployed successfully in the `production-webapp`
+namespace.
+
+### Storage and Pod Persistence
+
+The PVC was dynamically provisioned and reached the `Bound` state with a
+capacity of `500Mi` and the `standard` StorageClass. Two application Pods
+reached the `Running` state with passing readiness checks.
+
+The file `/data/student.txt` was created with the following content:
+
+```text
+Student: Jane Doe
+```
+
+After the original Pod was deleted and Kubernetes created a replacement Pod,
+the file was still available with the same content. This verifies that the
+data was stored on the PVC rather than only in the Pod filesystem.
+
+![PVC persistence and Pod replacement](./task_1.png)
+
+### Service and HPA Verification
+
+The Service returned the Nginx welcome page through port forwarding:
+
+```bash
+curl http://localhost:8080
+```
+
+The BusyBox load generator was created successfully and sent requests to the
+`web-service` ClusterIP Service. The HPA reported CPU utilization changing
+from `1%/50%` to `50%/50%` while maintaining `2` replicas.
+
+The replica count remained at two because the HPA configuration has
+`minReplicas: 2`. The load generator and HPA monitoring commands completed
+successfully, and the load generator was deleted afterward.
+
+![Service response, load generator, and HPA output](./task_2.png)
+
 ---
 
-## 7. Probe Diagnostics Reference
+## 8. Probe Diagnostics Reference
 | Probe | Target Question | Action on Failure |
 | :--- | :--- | :--- |
 | **Startup Probe** | Has the process initialized? | Restarts container (disables other probes until it passes) |
@@ -207,7 +248,7 @@ kubectl get hpa -n production-webapp -w
 
 ---
 
-## 8. Troubleshooting Guide
+## 9. Troubleshooting Guide
 
 ### Issue 1: PVC stuck in `Pending`
 - **Check**: `kubectl describe pvc web-data -n production-webapp`
@@ -226,7 +267,7 @@ kubectl get hpa -n production-webapp -w
 
 ---
 
-## 9. Bonus Challenges for Fast Finishers
+## 10. Bonus Challenges for Fast Finishers
 1. **Challenge 1 (Target Tuning)**: Lower the HPA CPU threshold from `50%` to `30%` in `hpa.yaml`, reapply, and observe how much faster the workload scales out.
 2. **Challenge 2 (Readiness Gating)**: Modify `readinessProbe.httpGet.path` to `/does-not-exist`. Run `kubectl get endpoints -n production-webapp web-service`. Notice that Pod status is `Running`, but `READY` is `0/1` and the endpoints list is completely empty!
 3. **Challenge 3 (Liveness Restart Loop)**: Modify `livenessProbe.httpGet.path` to `/crash`. Observe the `RESTARTS` count increment every 15 seconds in `kubectl get pods -w`.
