@@ -1,127 +1,368 @@
 # Session 15: Helm
 
-Managing many Kubernetes YAML files across multiple environments leads to copy-paste errors and configuration drift.
-
-Helm solves this. It is the package manager for Kubernetes.
+This session focused on learning Helm, the package manager for Kubernetes, and practicing the full lifecycle of a Helm release: create, install, upgrade, verify, rollback, and uninstall.
 
 ---
 
-## Why Helm?
+## Objectives
 
-Without Helm, deploying to three environments means three separate sets of YAML files. Change one value and you update three files manually.
-
-With Helm, you write one chart. You pass different values for each environment.
-
----
-
-## Topics Covered
-
-| Folder | Topic |
-|--------|-------|
-| `01-what-is-helm/` | What is Helm, installing Helm, first commands |
-| `02-helm-charts/` | What is a Chart, creating and installing charts |
-| `03-chart-structure/` | Chart directory layout, Chart.yaml, values.yaml, templates |
-| `04-chart-yaml/` | Chart.yaml fields, version vs appVersion |
-| `05-values-yaml/` | Default values, overriding with -f and --set |
-| `06-templates/` | Go template syntax, variables, conditionals |
-| `07-install-upgrade/` | helm install, helm upgrade, revision history |
-| `08-rollback/` | helm rollback, --atomic flag, auto rollback |
-| `09-deploying-application/` | Full application deployment: lint, install, upgrade, rollback |
-| `mini-project/` | Deploy the Notes App from scratch using Helm |
+- Understand what Helm is and why it is useful in Kubernetes
+- Create a chart from scratch
+- Install and manage applications with Helm
+- Upgrade a deployment with custom values
+- Roll back to a previous release version
+- Deploy a small mini-project using Helm
 
 ---
 
-## Core Concepts
+## Key Helm Concepts
 
-**Chart:** A packaged collection of Kubernetes YAML templates with variables. Think of it as a recipe.
-
-**Release:** A running instance of a chart deployed to a cluster. Think of it as the cooked meal.
-
-**Values:** The variables you pass to customize the chart. Think of them as the ingredients.
+- Chart: a packaged Kubernetes application
+- Release: an installed instance of a chart in a cluster
+- Values: configuration parameters used to customize a chart
+- Template: YAML files rendered with Go templates and values
 
 ---
 
-## Key Commands
+## Important Helm Commands Covered in the Lab
+
+### 1. helm repo update
+
+Purpose: refresh the local chart repository metadata.
 
 ```bash
-# Install Helm
-curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-# Create a new chart
-helm create my-chart
-
-# Render templates locally (no cluster needed)
-helm template my-release ./my-chart
-
-# Check chart for errors
-helm lint ./my-chart
-
-# Install a chart
-helm install my-release ./my-chart
-
-# Install with custom values
-helm install my-release ./my-chart -f values-prod.yaml
-
-# List all releases
-helm list
-
-# Upgrade a release
-helm upgrade my-release ./my-chart --set replicaCount=3
-
-# View release history
-helm history my-release
-
-# Rollback to a previous revision
-helm rollback my-release 1
-
-# Remove a release
-helm uninstall my-release
+helm repo update
 ```
 
----
-
-## Helm 2 vs Helm 3
+Observed output from the lab:
 
 ```text
-Helm 2: required Tiller (a server pod in the cluster)
-        ran with cluster-admin privileges
-        security risk
-
-Helm 3: no Tiller
-        client-only
-        uses your kubeconfig permissions
-        release state stored as Kubernetes Secrets
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "bitnami" chart repository
+Update Complete. ⎈Happy Helming!⎈
 ```
 
 ---
 
-## Interview Preparation
+### 2. helm install
 
-**Beginner:**
+Purpose: deploy a chart to the cluster.
 
-Q: What is Helm?
-A: Helm is a package manager for Kubernetes. It packages Kubernetes YAML files into parameterized charts that can be installed, upgraded, and rolled back with single commands.
+```bash
+helm install my-nginx bitnami/nginx
+```
 
-Q: What is the difference between a Chart and a Release?
-A: A Chart is the packaged template (the recipe). A Release is a running instance of that chart installed in a cluster (the cooked meal).
+Observed output:
 
-**Intermediate:**
+```text
+NAME: my-nginx
+LAST DEPLOYED: Thu Oct  8 18:49:34 2026
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+CHART: nginx
+CHART VERSION: 25.2.1
+APP VERSION: 1.31.6
+```
 
-Q: What is the difference between values.yaml and --set?
-A: values.yaml holds the default configuration in version control. --set overrides individual values at runtime. In production pipelines, use separate values files (-f values-prod.yaml) so all configuration is auditable in Git.
-
-Q: What does --atomic do?
-A: During helm upgrade, --atomic auto-rolls back to the previous healthy revision if any pod fails readiness within the timeout period.
-
-**Scenario-Based:**
-
-Q: You run helm upgrade and it gets stuck in pending-upgrade state. What do you do?
-A: Inspect helm secrets with kubectl get secrets -l owner=helm. Find the stuck pending revision secret and delete it. Then run helm rollback to the last healthy revision.
+This created a running nginx deployment from the Bitnami chart.
 
 ---
 
-## Reference
+### 3. helm list
 
-* **Helm Documentation:** https://helm.sh/docs/
-* **Helm Chart Template Guide:** https://helm.sh/docs/chart_template_guide/
-* **Helm CLI Reference:** https://helm.sh/docs/helm/
+Purpose: see all Helm releases in the current namespace.
+
+```bash
+helm list
+```
+
+Observed output:
+
+```text
+NAME            NAMESPACE   REVISION STATUS   CHART          APP VERSION
+my-nginx        default     1        deployed nginx         1.31.6
+```
+
+---
+
+### 4. helm status
+
+Purpose: display the current status and metadata for a release.
+
+```bash
+helm status my-nginx
+```
+
+Typical output:
+
+```text
+NAME: my-nginx
+LAST DEPLOYED: Thu Oct  8 18:49:34 2026
+NAMESPACE: default
+STATUS: deployed
+REVISION: 1
+```
+
+---
+
+### 5. helm get
+
+Purpose: inspect the generated manifest or values for a release.
+
+```bash
+helm get values my-nginx
+helm get manifest my-nginx
+```
+
+This helps confirm what Helm rendered before and after modifications.
+
+---
+
+### 6. helm upgrade
+
+Purpose: upgrade a release by changing the chart version or values.
+
+```bash
+helm upgrade my-nginx bitnami/nginx --set replicaCount=3
+```
+
+Typical output:
+
+```text
+Release "my-nginx" has been upgraded.
+NAME: my-nginx
+LAST DEPLOYED: Thu Oct  8 18:49:34 2026
+NAMESPACE: default
+STATUS: deployed
+REVISION: 2
+```
+
+---
+
+### 7. helm history
+
+Purpose: show the revision history of a release.
+
+```bash
+helm history my-nginx
+```
+
+Typical output:
+
+```text
+REVISION  UPDATED                   STATUS     CHART         APP VERSION
+1         Thu Oct 8 ...            deployed   nginx         1.31.6
+2         Thu Oct 8 ...            deployed   nginx         1.31.6
+```
+
+---
+
+### 8. helm rollback
+
+Purpose: revert a release to a previous successful revision.
+
+```bash
+helm rollback my-nginx 1
+```
+
+Observed output in the lab:
+
+```text
+Rollback was a success.
+Happy Helming!
+```
+
+---
+
+### 9. helm uninstall
+
+Purpose: remove a release and its related Kubernetes resources.
+
+```bash
+helm uninstall my-nginx
+```
+
+Observed output:
+
+```text
+release "my-nginx" uninstalled
+```
+
+---
+
+### 10. helm repo
+
+Purpose: manage repositories for Helm charts.
+
+```bash
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo list
+```
+
+This is how Helm pulls charts such as nginx, mysql, redis, and many others.
+
+---
+
+### 11. helm search
+
+Purpose: search for charts in the configured repositories.
+
+```bash
+helm search repo nginx
+```
+
+Typical output:
+
+```text
+NAME                 CHART VERSION APP VERSION DESCRIPTION
+bitnami/nginx        25.2.1        1.31.6      NGINX Open Source
+```
+
+---
+
+### 12. helm create
+
+Purpose: generate a starter chart structure.
+
+```bash
+helm create simple-chart
+```
+
+Generated folder structure:
+
+```text
+simple-chart/
+  Chart.yaml
+  values.yaml
+  templates/
+    deployment.yaml
+    service.yaml
+    helpers.tpl
+    tests/
+```
+
+This created the base template for a chart.
+
+---
+
+### 13. helm template
+
+Purpose: render chart templates locally without installing them.
+
+```bash
+helm template my-release simple-chart
+```
+
+This is useful to validate YAML and template logic before deploying.
+
+---
+
+## Rollback Workflow (Complete Practice)
+
+The lab also demonstrated the full release lifecycle using Helm.
+
+```bash
+helm install my-release simple-chart
+helm upgrade my-release simple-chart --set replicaCount=3
+helm history my-release
+helm rollback my-release 1
+helm status my-release
+kubectl get pods
+kubectl get services
+```
+
+Flow:
+
+1. Install
+2. Upgrade
+3. Verify resources and revision
+4. Upgrade again
+5. Verify application state
+6. Roll back to a previous revision
+7. Confirm rollback succeeded
+
+---
+
+## Screenshot Evidence
+
+### Helm basic commands and install
+
+![Helm basic commands](Homework/01-helm-basic.png)
+
+### Helm chart creation and chart structure
+
+![Helm chart creation](Homework/02-helm-chart.png)
+
+![Chart structure](Homework/03-chart-structure.png)
+
+### Mini project demo
+
+![Mini project validation](Homework/mini-project.png)
+
+---
+
+## Mini Project: notes-chart
+
+A mini Helm project was created inside the folder:
+
+```text
+mini-project/notes-chart/
+```
+
+This chart contains:
+
+- `Chart.yaml`
+- `values.yaml`
+- `templates/configmap.yaml`
+- `templates/deployment.yaml`
+- `templates/service.yaml`
+
+### Key commands used
+
+```bash
+helm lint notes-chart
+helm template notes-dev notes-chart
+helm install notes-dev notes-chart
+kubectl get pods
+kubectl get services
+kubectl get configmaps
+helm upgrade notes-dev notes-chart -f notes-chart/values-prod.yaml
+helm history notes-dev
+helm rollback notes-dev 1
+helm uninstall notes-dev
+```
+
+### What the chart does
+
+- deploys a containerized app using nginx
+- creates a ConfigMap with environment values
+- creates a Deployment with configurable replica count
+- exposes the app with a NodePort Service
+
+---
+
+## Practical Learning Summary
+
+Helm simplifies Kubernetes deployments by packaging applications into reusable charts and allowing safe upgrades and rollbacks.
+
+In this session, the most important lesson was:
+
+> A Helm chart is not only deployment logic, it is also versioned release management.
+
+This means you can:
+
+- deploy consistently across environments
+- change settings using values files
+- track every revision with `helm history`
+- recover quickly with `helm rollback`
+
+---
+
+## References
+
+- Helm official docs: https://helm.sh/docs/
+- Helm chart template guide: https://helm.sh/docs/chart_template_guide/
+- Bitnami charts: https://artifacthub.io/packages/search?kind=0&sort=relevance&page=1

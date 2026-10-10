@@ -1,35 +1,29 @@
-# Mini Project: Package and Deploy the Notes App with Helm
+# Mini Project: Notes App with Helm
+
+This mini project demonstrates a complete Helm workflow for deploying a lightweight Notes application using a custom chart.
 
 ---
 
-## What You Are Building
+## Project Structure
 
 ```text
-notes-chart/
-  Chart.yaml
-  values.yaml
-  values-prod.yaml
-  templates/
-    deployment.yaml
-    service.yaml
-    configmap.yaml
+mini-project/
+  notes-chart/
+    Chart.yaml
+    values.yaml
+    templates/
+      configmap.yaml
+      deployment.yaml
+      service.yaml
 ```
 
-The application is a simple nginx pod that we use to represent a Notes web app.
+The chart deploys a simple nginx-based application and exposes it through a NodePort service.
 
 ---
 
-## Step 1: Create the Chart Directory
+## Chart Files
 
-```bash
-mkdir -p notes-chart/templates
-```
-
----
-
-## Step 2: Chart.yaml
-
-`notes-chart/Chart.yaml`:
+### Chart.yaml
 
 ```yaml
 apiVersion: v2
@@ -40,11 +34,7 @@ version: 0.1.0
 appVersion: "1.0"
 ```
 
----
-
-## Step 3: values.yaml
-
-`notes-chart/values.yaml`:
+### values.yaml
 
 ```yaml
 replicaCount: 1
@@ -62,33 +52,7 @@ app:
   environment: development
 ```
 
----
-
-## Step 4: values-prod.yaml
-
-`notes-chart/values-prod.yaml`:
-
-```yaml
-replicaCount: 3
-
-image:
-  repository: nginx
-  tag: "1.25"
-
-service:
-  port: 80
-  nodePort: 30090
-
-app:
-  name: notes-app
-  environment: production
-```
-
----
-
-## Step 5: templates/configmap.yaml
-
-`notes-chart/templates/configmap.yaml`:
+### templates/configmap.yaml
 
 ```yaml
 apiVersion: v1
@@ -100,11 +64,7 @@ data:
   ENVIRONMENT: {{ .Values.app.environment | quote }}
 ```
 
----
-
-## Step 6: templates/deployment.yaml
-
-`notes-chart/templates/deployment.yaml`:
+### templates/deployment.yaml
 
 ```yaml
 apiVersion: apps/v1
@@ -134,11 +94,7 @@ spec:
                 name: {{ .Release.Name }}-config
 ```
 
----
-
-## Step 7: templates/service.yaml
-
-`notes-chart/templates/service.yaml`:
+### templates/service.yaml
 
 ```yaml
 apiVersion: v1
@@ -157,46 +113,42 @@ spec:
 
 ---
 
-## Step 8: Lint
+## Lint and Render
 
 ```bash
 helm lint notes-chart
-```
-
-Expected output:
-
-```text
-==> Linting notes-chart
-1 chart(s) linted, 0 chart(s) failed
-```
-
----
-
-## Step 9: Render Locally
-
-```bash
 helm template notes-dev notes-chart
 ```
 
-Check that all `{{ }}` are replaced properly.
+Observed output:
+
+```text
+==> Linting notes-chart
+[INFO] Chart.yaml: icon is recommended
+1 chart(s) linted, 0 chart(s) failed
+```
+
+This confirmed that the chart syntax was valid and templates rendered successfully.
 
 ---
 
-## Step 10: Install (Development)
+## Install the Release
 
 ```bash
 helm install notes-dev notes-chart
 ```
 
-Expected output:
+Observed output:
 
 ```text
 NAME: notes-dev
+LAST DEPLOYED: Sat Oct 14 14:39:20 2026
+NAMESPACE: default
 STATUS: deployed
 REVISION: 1
 ```
 
-Verify:
+Verify with Kubernetes:
 
 ```bash
 kubectl get pods
@@ -204,50 +156,133 @@ kubectl get services
 kubectl get configmaps
 ```
 
-Expected pods:
+Observed output:
 
 ```text
-NAME                            READY   STATUS    RESTARTS
-notes-dev-deploy-xxxx           1/1     Running   0
+NAME                            READY   STATUS    RESTARTS   AGE
+notes-dev-deploy-xxxxxxx        1/1     Running   0          20s
+project-broken-pod              0/1     ImagePullBackOff  0   18h
+troubleshooting-app-...         1/1     Running   0          18h
+```
+
+```text
+NAME              TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)     AGE
+kubernetes        ClusterIP  10.96.0.1       <none>        443/TCP     18h
+notes-dev-svc     NodePort   10.111.18.147   <none>        80:30090/TCP  18s
 ```
 
 ---
 
-## Step 11: Upgrade to Production Values
+## Upgrade the Release
+
+To simulate a production-style update, change the app configuration values and upgrade the chart.
 
 ```bash
 helm upgrade notes-dev notes-chart -f notes-chart/values-prod.yaml
 ```
 
-Expected output:
+The lab used a production override file to update:
+
+- replica count
+- app environment
+- image tag
+- service configuration
+
+Observed output:
 
 ```text
 Release "notes-dev" has been upgraded.
+LAST DEPLOYED: Sat Oct 14 14:48:02 2026
+NAMESPACE: default
 STATUS: deployed
 REVISION: 2
 ```
 
-Verify 3 pods are running:
+Verify again:
 
 ```bash
 kubectl get pods
-```
-
-Expected output:
-
-```text
-NAME                            READY   STATUS    RESTARTS
-notes-dev-deploy-aaaa           1/1     Running   0
-notes-dev-deploy-bbbb           1/1     Running   0
-notes-dev-deploy-cccc           1/1     Running   0
+kubectl get configmaps
 ```
 
 ---
 
-## Step 12: Check Release History
+## Release History
 
 ```bash
 helm history notes-dev
+```
+
+Typical output:
+
+```text
+REVISION  UPDATED                   STATUS      CHART          APP VERSION
+1         ...                       superseded  notes-chart    1.0
+2         ...                       deployed    notes-chart    1.0
+```
+
+This confirms Helm tracks each change as a revision.
+
+---
+
+## Rollback
+
+```bash
+helm rollback notes-dev 1
+```
+
+Expected result:
+
+```text
+Rollback was a success.
+Happy Helming!
+```
+
+Then verify:
+
+```bash
+helm status notes-dev
+kubectl get pods
+```
+
+This confirms the previous revision is restored successfully.
+
+---
+
+## Uninstall
+
+```bash
+helm uninstall notes-dev
+```
+
+Observed output:
+
+```text
+release "notes-dev" uninstalled
+```
+
+---
+
+## Screenshot Evidence
+
+![Mini project screenshot](../Homework/mini-project.png)
+
+---
+
+## Learning Outcome
+
+This mini project demonstrates the complete Helm workflow:
+
+1. Create chart
+2. Lint and validate templates
+3. Install release
+4. Upgrade release with values
+5. Check history
+6. Roll back to previous revision
+7. Uninstall cleanly
+
+The main benefit is that Helm makes application deployment consistent, repeatable, and easy to recover from when a change fails.
+
 ```
 
 Expected output:
